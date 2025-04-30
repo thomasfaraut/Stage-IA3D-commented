@@ -37,6 +37,9 @@ def eprint(*args, **kwargs):
     print(*args,  file=sys.stderr, **kwargs)
 
 
+
+
+
 class Mutation():
     """
     Tiny class for storing a bed interval with an associated mutation
@@ -114,13 +117,13 @@ class Mutator():
 
     Configuration
     ----------
-    The SILENCE parameter is defined in the config_mutation.py file and used to 
+    The SILENCE parameter is defined in the config_mutation.py file and used to
     control the verbosity of the logging.
 
     """
     # Class-level constant
     silenced = True
-    
+
     def __init__(self, fasta_handle, intervals: List[Mutation], maximumCached : int = 4):
         self.handle = fasta_handle
         self.maximumCached = maximumCached
@@ -128,7 +131,7 @@ class Mutator():
         self.intervals = intervals
         self.cachedSequences = OrderedDict()
         self.chromosome_mutations = defaultdict(int)
-        self.trace = defaultdict(list) 
+        self.trace = defaultdict(list)
 
     def flush(self):
         self.cachedSequences = {}
@@ -146,7 +149,7 @@ class Mutator():
 
     def modify(self, chrom, sequence):
         self.cachedSequences[chrom] = sequence
-    
+
     def record_trace(self,interval, silenced: bool = None):
         if interval.name in self.trace[interval.chrom].keys():
             name = interval.name
@@ -157,7 +160,7 @@ class Mutator():
             if (silenced is None and not self.silenced) or silenced == False :
                 logging.info(f"Mutation {interval.name} already exists, renaming to {name} ...")
             interval.name = name
-            
+
         self.trace[interval.chrom][interval.name]={}
         self.trace[interval.chrom][interval.name]["start"]=interval.start
         self.trace[interval.chrom][interval.name]["end"]=interval.end
@@ -235,9 +238,9 @@ class Mutator():
     def mutate_per_chrom(self, chrom):
         """
         Mutate the sequence for each interval in the chromosome according to the mutation type
-        """ 
+        """
         interval_in_chrom = [interval for interval in self.intervals if interval.chrom == chrom]
-        
+
         for interval in interval_in_chrom:
             self.chromosome_mutations[interval.chrom] += 1
             self.record_trace(interval)
@@ -253,23 +256,23 @@ class Mutator():
             else:
                 self.chromosome_mutations[interval.chrom] -= 1
                 raise ValueError("%s is not a valid operation" % interval.op)
-        
+
 
     def mutate(self):
         """
-        Mutate the sequence for each interval according to the mutation type 
+        Mutate the sequence for each interval according to the mutation type
         and returns the set of mutated chromosomes as biopython SeqRecords.
         """
         for interval in self.intervals:
             self.trace[interval.chrom]={}
-        
+
         # New way of doing this
         seq_records = []
         for chrom in self.trace.keys():
             self.mutate_per_chrom(chrom=chrom)
             seq_record = self.record_SeqRecords(chrom=chrom)
             seq_records.append(seq_record)
-        
+
         return seq_records
 
 
@@ -352,7 +355,7 @@ class Mutator():
                                    description=f"mutated chromosome {num} mutations")
             seq_records.append(seq_record)
         return seq_records
-    
+
     def get_trace(self):
         keys = ["chrom", "name", "start", "end", "strand", "operation", "ref_seq", "variant_seq"]
         data=[]
@@ -375,8 +378,8 @@ def replace_substring(seq, newstring: str, start: int, end: int):
 
 def seq_rep_fill(seq: str = "A", length: int = None):
     """
-    Function that provides a proper filling sequence for a given length, 
-    by creating a repeatition of the input sequence (e.g. seq="ATCG" and 
+    Function that provides a proper filling sequence for a given length,
+    by creating a repeatition of the input sequence (e.g. seq="ATCG" and
     length=10 will return "ATCGATCGAT")
     """
     if length is None:
@@ -388,5 +391,3 @@ def seq_rep_fill(seq: str = "A", length: int = None):
     else:
         filling = ""
     return seq * (length // len(seq)) + filling
-
-
