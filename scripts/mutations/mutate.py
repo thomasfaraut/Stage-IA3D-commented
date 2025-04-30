@@ -73,8 +73,6 @@ def main(mutationfile, bed, genome,
     else:
         mutations = read_mutations_from_tsv(mutationfile)
 
-    fasta_handle = FastaFile(genome)
-
     mutator = Mutator(FastaFile(genome), mutations)
     mutator.mutate()
     seq_records = mutator.get_mutated_chromosome_records()
