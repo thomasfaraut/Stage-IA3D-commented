@@ -70,7 +70,7 @@ class Mutation():
             return False
 
     def trace(self):
-        return {'chrom': self.chrom, 'start': self.start, 'stop': self.end, 'strand': self.strand,
+        return {'chrom': self.chrom, 'name': self.name, 'start': self.start, 'end': self.end, 'strand': self.strand,
                 'operation': self.op, 'ref_seq': self.ref, 'variant_seq': self.alt}
 
     def __str__(self):
@@ -132,21 +132,24 @@ class Mutator():
     def chromosomes(self):
         return self.references
 
-    def fetch(self, chromosome, start=None, end=None):
-        if chromosome not in self.cachedSequences:
+    def fetch(self, reference=None, start=None, end=None):
+        return  self.handle.fetch(reference=reference, start=start, end=end)
+
+    def fetch_old(self, reference=None, start=None, end=None):
+        if reference not in self.cachedSequences:
             if len(self.cachedSequences) == self.maximumCached:
                 self.cachedSequences.popitem(last=False)
-            self.cachedSequences[chromosome] = self.handle.fetch(chromosome)
+            self.cachedSequences[reference] = self.handle.fetch(reference)
         if start and end:
-            return self.cachedSequences[chromosome][start:end]
-        return self.cachedSequences[chromosome]
+            return self.cachedSequences[reference][start:end]
+        return self.cachedSequences[reference]
 
     def get_chromosomes(self):
         return set([mutation.chrom for mutation in self.mutations])
 
 
     def get_ref(self, mutation):
-        subseq = self.fetch(mutation.chrom, start=mutation.start, end=mutation.end)
+        subseq = self.fetch(reference=mutation.chrom, start=mutation.start, end=mutation.end)
         return subseq
 
     def shuffle(self, mutation):
@@ -171,7 +174,7 @@ class Mutator():
         Interval will be rerverse complemented
         """
         subseq = self.get_ref(mutation)
-        mutation.ref =subseq
+        mutation.ref = subseq
         mutation.alt = str(Seq(subseq).reverse_complement())
 
     def insert(self, mutation, silenced: bool = None):
@@ -214,16 +217,16 @@ class Mutator():
 
     def get_mutated_chromosome_sequence(self, chrom):
         chrom_intervals = [interval for interval in self.mutations if interval.chrom == chrom]
-        chrom_len = len(self.fetch(chrom))
+        chrom_len = len(self.fetch(reference=chrom))
         intervals = []
         offset = 0
         mutated_chromosome = ""
         for inter in sorted(chrom_intervals, key=lambda x: x.start):
-            previous_seq = self.fetch(chrom, start=offset, end=inter.start)
+            previous_seq = self.fetch(reference=chrom, start=offset, end=inter.start)
             mutated_seq = inter.alt
             mutated_chromosome += previous_seq + mutated_seq
             offset = inter.end
-        mutated_chromosome += self.fetch(chrom, start=offset, end=chrom_len)
+        mutated_chromosome += self.fetch(reference=chrom, start=offset, end=chrom_len)
         return mutated_chromosome
 
     def get_mutated_chromosome_records(self, chromosomes: list = None):
@@ -243,7 +246,7 @@ class Mutator():
         Equivalent to bedtools complement
         """
         chrom_intervals = [inter for inter in self.intervals if inter.chrom == chrom]
-        chrom_len = len(self.fetch(chrom))
+        chrom_len = len(self.fetch(reference=chrom))
         intervals = []
         previous = 0
         for inter in sorted(chrom_intervals, key=lambda x: x.start):
@@ -293,7 +296,6 @@ class Mutator():
         for mutation in self.mutations:
             data.append(mutation.trace())
         return pd.DataFrame(data)
-
 
 def replace_substring(seq, newstring: str, start: int, end: int):
     """Replaces in a string, a substring, specified by positions, with a given string
